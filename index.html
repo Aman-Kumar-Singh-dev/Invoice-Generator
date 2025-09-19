@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chosen Palette: Slate & Sky -->
+    <!-- Application Structure Plan: A two-column layout with a data entry form on the left and a real-time invoice preview on the right. This provides immediate visual feedback, making the process intuitive and error-proof. The user adds items dynamically, and all totals are calculated automatically. A final print/save function formats the output. This structure was chosen for its efficiency and user-friendliness in a task-oriented application like an invoice generator. -->
+    <!-- Visualization & Content Choices: Report Info: Invoice fields (sender, client, items, totals, tax). Goal: Create a formal invoice. Viz/Presentation Method: Structured HTML/CSS with Tailwind for both the input form and the live preview pane. Interaction: Form inputs dynamically update the preview via JavaScript. An 'Add Item' button appends new rows. All calculations are handled in real-time. Justification: This direct manipulation interface is the clearest way to build a document. Library/Method: Vanilla JavaScript for logic, Tailwind CSS for styling. Confirmed NO SVG/Mermaid. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .form-section {
+            background-color: #f8fafc;
+        }
+        .preview-section {
+            background-color: #ffffff;
+        }
+        @media print {
+            .no-print {
+                display: none;
+            }
+            .print-area {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+            }
+            body {
+                margin: 0;
+            }
+            .invoice-preview-container {
+                box-shadow: none !important;
+                border: none !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                max-width: 100% !important;
+                border-radius: 0 !important;
+            }
+        }
+    </style>
+</head>
+<body class="bg-slate-100">
+    <div class="container mx-auto p-4 md:p-8">
+        <div class="grid grid-cols-1 lg:grid-cols-5 gap-8">
+
+            <div class="lg:col-span-3 form-section p-6 rounded-2xl shadow-lg no-print">
+                <h1 class="text-3xl font-bold text-slate-800 mb-6">Invoice Details</h1>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div>
+                        <h2 class="text-xl font-semibold text-slate-700 mb-3">From</h2>
+                        <input type="text" id="from_name" placeholder="Your Company Name" class="w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-sky-500 focus:border-sky-500">
+                        <textarea id="from_address" placeholder="Your Address" class="mt-2 w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-sky-500 focus:border-sky-500" rows="3"></textarea>
+                         <input type="text" id="from_gst" placeholder="Your GSTIN" class="mt-2 w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-sky-500 focus:border-sky-500">
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-semibold text-slate-700 mb-3">Bill To</h2>
+                        <input type="text" id="to_name" placeholder="Client's Name" class="w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-sky-500 focus:border-sky-500">
+                        <textarea id="to_address" placeholder="Client's Address" class="mt-2 w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-sky-500 focus:border-sky-500" rows="3"></textarea>
+                        <input type="text" id="to_gst" placeholder="Client's GSTIN" class="mt-2 w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-sky-500 focus:border-sky-500">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                    <div>
+                        <label for="invoice_number" class="block text-sm font-medium text-slate-600">Invoice Number</label>
+                        <input type="text" id="invoice_number" value="INV-001" class="mt-1 w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-sky-500 focus:border-sky-500">
+                    </div>
+                    <div>
+                        <label for="date_issue" class="block text-sm font-medium text-slate-600">Date of Issue</label>
+                        <input type="date" id="date_issue" class="mt-1 w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-sky-500 focus:border-sky-500">
+                    </div>
+                    <div>
+                        <label for="date_due" class="block text-sm font-medium text-slate-600">Due Date</label>
+                        <input type="date" id="date_due" class="mt-1 w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-sky-500 focus:border-sky-500">
+                    </div>
+                </div>
+
+                <div id="items-container">
+                    <h2 class="text-xl font-semibold text-slate-700 mb-3">Items</h2>
+                </div>
+                <button id="add-item-btn" class="mt-4 bg-sky-500 text-white px-4 py-2 rounded-lg hover:bg-sky-600 transition duration-300">Add Item</button>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                    <div>
+                        <label for="tax_rate" class="block text-sm font-medium text-slate-600">GST Rate (%)</label>
+                        <input type="number" id="tax_rate" value="18" class="mt-1 w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-sky-500 focus:border-sky-500">
+                    </div>
+                    <div>
+                        <label for="discount_rate" class="block text-sm font-medium text-slate-600">Discount Rate (%)</label>
+                        <input type="number" id="discount_rate" value="0" class="mt-1 w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-sky-500 focus:border-sky-500">
+                    </div>
+                </div>
+
+                <div class="mt-6">
+                    <label for="notes" class="block text-sm font-medium text-slate-600">Notes / Terms & Conditions</label>
+                    <textarea id="notes" placeholder="e.g. Payment is due within 30 days." class="mt-1 w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-sky-500 focus:border-sky-500" rows="3"></textarea>
+                </div>
+                
+                 <div class="mt-8 text-center">
+                    <button onclick="window.print()" class="w-full md:w-auto bg-slate-700 text-white font-bold py-3 px-6 rounded-lg hover:bg-slate-800 transition duration-300">
+                        Print / Save as PDF
+                    </button>
+                </div>
+
+            </div>
+
+            <div class="lg:col-span-2 print-area">
+                <div id="invoice-preview" class="preview-section p-8 lg:p-12 rounded-2xl shadow-lg invoice-preview-container max-w-4xl mx-auto border border-slate-200">
+                    <div class="flex justify-between items-start pb-8 border-b border-slate-200">
+                        <div>
+                            <h1 id="preview_from_name" class="text-3xl font-bold text-slate-900">Your Company</h1>
+                            <p id="preview_from_address" class="text-slate-500 mt-2 whitespace-pre-line">Your Address</p>
+                            <p id="preview_from_gst" class="text-slate-500 mt-1"></p>
+                        </div>
+                        <h2 class="text-4xl font-bold text-slate-400 uppercase tracking-widest">Invoice</h2>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-8 mt-8">
+                        <div>
+                            <p class="font-semibold text-slate-500 mb-1">Bill to</p>
+                            <h3 id="preview_to_name" class="text-lg font-bold text-slate-800">Client Name</h3>
+                            <p id="preview_to_address" class="text-slate-500 mt-1 whitespace-pre-line">Client Address</p>
+                             <p id="preview_to_gst" class="text-slate-500 mt-1"></p>
+                        </div>
+                        <div class="text-right">
+                             <div>
+                                <p class="font-semibold text-slate-500">Invoice Number</p>
+                                <p id="preview_invoice_number" class="text-slate-800">INV-001</p>
+                            </div>
+                            <div class="mt-4">
+                                <p class="font-semibold text-slate-500">Date of Issue</p>
+                                <p id="preview_date_issue" class="text-slate-800">-</p>
+                            </div>
+                            <div class="mt-4">
+                                <p class="font-semibold text-slate-500">Due Date</p>
+                                <p id="preview_date_due" class="text-slate-800">-</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-10">
+                        <table class="w-full text-left">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-600 uppercase text-sm">
+                                    <th class="p-3 font-semibold">Description</th>
+                                    <th class="p-3 font-semibold text-center">Qty</th>
+                                    <th class="p-3 font-semibold text-right">Price</th>
+                                    <th class="p-3 font-semibold text-right">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody id="preview_items">
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="flex justify-end mt-8">
+                        <div class="w-full max-w-sm">
+                            <div class="flex justify-between text-slate-600 py-2">
+                                <span>Subtotal</span>
+                                <span id="preview_subtotal">$0.00</span>
+                            </div>
+                            <div class="flex justify-between text-slate-600 py-2">
+                                <span>Discount (<span id="preview_discount_rate_text">0</span>%)</span>
+                                <span id="preview_discount_amount" class="text-red-500">-$0.00</span>
+                            </div>
+                            <div class="flex justify-between text-slate-600 py-2 border-b">
+                                <span>GST (<span id="preview_tax_rate_text">18</span>%)</span>
+                                <span id="preview_tax_amount">$0.00</span>
+                            </div>
+                            <div class="flex justify-between font-bold text-slate-800 text-xl py-4">
+                                <span>Total</span>
+                                <span id="preview_total">$0.00</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-10 pt-8 border-t border-slate-200">
+                        <h4 class="font-semibold text-slate-800 mb-2">Notes</h4>
+                        <p id="preview_notes" class="text-slate-500 text-sm">Payment is due within 30 days.</p>
+                    </div>
+
+                    <div class="mt-16 text-center">
+                        <p class="text-slate-500">Thank you for your business!</p>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const form = document.querySelector('.form-section');
+            const itemsContainer = document.getElementById('items-container');
+            const addItemBtn = document.getElementById('add-item-btn');
+
+            const currencyFormatter = new Intl.NumberFormat('en-IN', {
+                style: 'currency',
+                currency: 'INR'
+            });
+            
+            let itemCounter = 0;
+
+            const updateInvoice = () => {
+                document.getElementById('preview_from_name').textContent = document.getElementById('from_name').value || 'Your Company';
+                document.getElementById('preview_from_address').textContent = document.getElementById('from_address').value || 'Your Address';
+                document.getElementById('preview_from_gst').textContent = `GSTIN: ${document.getElementById('from_gst').value || '-'}`;
+                
+                document.getElementById('preview_to_name').textContent = document.getElementById('to_name').value || "Client's Name";
+                document.getElementById('preview_to_address').textContent = document.getElementById('to_address').value || "Client's Address";
+                 document.getElementById('preview_to_gst').textContent = `GSTIN: ${document.getElementById('to_gst').value || '-'}`;
+
+                document.getElementById('preview_invoice_number').textContent = document.getElementById('invoice_number').value || 'INV-001';
+                document.getElementById('preview_date_issue').textContent = document.getElementById('date_issue').value || '-';
+                document.getElementById('preview_date_due').textContent = document.getElementById('date_due').value || '-';
+                document.getElementById('preview_notes').textContent = document.getElementById('notes').value || 'Payment is due within 30 days.';
+                
+                const previewItems = document.getElementById('preview_items');
+                previewItems.innerHTML = '';
+                let subtotal = 0;
+                
+                const itemRows = itemsContainer.querySelectorAll('.item-row');
+                itemRows.forEach(row => {
+                    const desc = row.querySelector('.item-desc').value;
+                    const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
+                    const price = parseFloat(row.querySelector('.item-price').value) || 0;
+                    const amount = qty * price;
+                    subtotal += amount;
+
+                    const previewRow = document.createElement('tr');
+                    previewRow.className = 'border-b border-slate-100';
+                    previewRow.innerHTML = `
+                        <td class="p-3">${desc || 'Item Description'}</td>
+                        <td class="p-3 text-center">${qty}</td>
+                        <td class="p-3 text-right">${currencyFormatter.format(price)}</td>
+                        <td class="p-3 text-right font-medium">${currencyFormatter.format(amount)}</td>
+                    `;
+                    previewItems.appendChild(previewRow);
+                });
+
+                const taxRate = parseFloat(document.getElementById('tax_rate').value) || 0;
+                const discountRate = parseFloat(document.getElementById('discount_rate').value) || 0;
+
+                const discountAmount = subtotal * (discountRate / 100);
+                const subtotalAfterDiscount = subtotal - discountAmount;
+                const taxAmount = subtotalAfterDiscount * (taxRate / 100);
+                const total = subtotalAfterDiscount + taxAmount;
+
+                document.getElementById('preview_subtotal').textContent = currencyFormatter.format(subtotal);
+                document.getElementById('preview_discount_rate_text').textContent = discountRate;
+                document.getElementById('preview_discount_amount').textContent = `-${currencyFormatter.format(discountAmount)}`;
+                document.getElementById('preview_tax_rate_text').textContent = taxRate;
+                document.getElementById('preview_tax_amount').textContent = currencyFormatter.format(taxAmount);
+                document.getElementById('preview_total').textContent = currencyFormatter.format(total);
+            };
+
+            const createItemRow = () => {
+                itemCounter++;
+                const itemRow = document.createElement('div');
+                itemRow.className = 'item-row grid grid-cols-1 md:grid-cols-12 gap-2 mb-3 items-center';
+                itemRow.innerHTML = `
+                    <div class="md:col-span-5">
+                        <input type="text" placeholder="Item Description" class="item-desc w-full p-2 border border-slate-300 rounded-md">
+                    </div>
+                    <div class="md:col-span-2">
+                        <input type="number" placeholder="Qty" value="1" class="item-qty w-full p-2 border border-slate-300 rounded-md">
+                    </div>
+                    <div class="md:col-span-2">
+                        <input type="number" placeholder="Price" class="item-price w-full p-2 border border-slate-300 rounded-md">
+                    </div>
+                    <div class="md:col-span-2">
+                        <p class="item-amount p-2 text-right text-slate-700 font-medium">${currencyFormatter.format(0)}</p>
+                    </div>
+                    <div class="md:col-span-1 text-right">
+                        <button class="remove-item-btn text-red-500 hover:text-red-700 font-bold">✕</button>
+                    </div>
+                `;
+                itemsContainer.appendChild(itemRow);
+            };
+
+            addItemBtn.addEventListener('click', createItemRow);
+            
+            itemsContainer.addEventListener('click', (e) => {
+                if(e.target.classList.contains('remove-item-btn')) {
+                    e.target.closest('.item-row').remove();
+                    updateInvoice();
+                }
+            });
+
+            form.addEventListener('input', (e) => {
+                if (e.target.matches('.item-qty, .item-price')) {
+                    const row = e.target.closest('.item-row');
+                    const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
+                    const price = parseFloat(row.querySelector('.item-price').value) || 0;
+                    const amount = qty * price;
+                    row.querySelector('.item-amount').textContent = currencyFormatter.format(amount);
+                }
+                updateInvoice();
+            });
+
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('date_issue').value = today;
+
+            createItemRow();
+            updateInvoice();
+        });
+    </script>
+</body>
+</html>
